@@ -10,6 +10,9 @@ readme = "README.md"
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
+[tool.poetry.scripts]
+yt-dlp-guitk = 'yt_dlp_guitk.app:main'
+
 [tool.poetry.dependencies]
 python = "^3.11"
 python-dotenv = "^1.0.1"
@@ -26,12 +29,15 @@ pre-commit = "^3.6.0"
 pip-audit = "^2.7.0"
 pyright = "^1.1.351"
 
+[tool.poetry-pyinstaller-plugin]
+version = "6.9.0"
+
+[tool.poetry-pyinstaller-plugin.scripts]
+yt-dlp-guitk = "yt_dlp_guitk/__main__.py"
+
 [tool.black]
 line-length = 120
 target-version = ['py311']
-
-[tool.poetry.scripts]
-yt-dlp-guitk = 'yt_dlp_guitk.app:main'
 
 [tool.ruff]
 line-length = 120
