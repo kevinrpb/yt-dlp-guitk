@@ -2,10 +2,12 @@ import sys
 
 from loguru import logger
 
-from . import env
+from . import const, env
 
 
-def configure(remove_existing=True, logfile="./log/app.log"):
+def configure(remove_existing=True):
+    log_filepath = const.DIRS.user_log_path / "app.log"
+
     if remove_existing:
         logger.remove()
 
@@ -14,7 +16,9 @@ def configure(remove_existing=True, logfile="./log/app.log"):
         logger.add(sys.stderr, level=stderr_level)
 
     logger.add(
-        logfile,
+        log_filepath,
         level=env.get("LOG_FILE_LEVEL", "WARNING"),
         rotation=env.get("LOG_FILE_ROTATION", "00:00"),
     )
+
+    logger.trace(f"Writing logs to {log_filepath}")

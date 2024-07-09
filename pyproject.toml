@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "yt-dlp-guitk"
-version = "0.0.1a0"
+version = "0.0.1a1"
 description = "A GUI wrapper over yt-dlp using guitk"
 authors = ["Kevin Romero Peces-Barba <hello@kevinrpb.me>"]
 license = "MIT"
@@ -20,6 +20,7 @@ loguru = "^0.7.2"
 guitk = "^0.4.3"
 yt-dlp = "^2024.7.8"
 
+platformdirs = "^4.2.2"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
 black = "^24.1.1"
@@ -32,8 +33,9 @@ pyright = "^1.1.351"
 [tool.poetry-pyinstaller-plugin]
 version = "6.9.0"
 
-[tool.poetry-pyinstaller-plugin.scripts]
-yt-dlp-guitk = { source = "yt_dlp_guitk/__main__.py", type = "onefile" }
+[tool.poetry-pyinstaller-plugin.scripts.yt-dlp-guitk]
+source = "yt_dlp_guitk/__main__.py"
+type = "onefile"
 
 [tool.black]
 line-length = 120
