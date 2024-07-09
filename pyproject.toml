@@ -33,7 +33,7 @@ pyright = "^1.1.351"
 version = "6.9.0"
 
 [tool.poetry-pyinstaller-plugin.scripts]
-yt-dlp-guitk = "yt_dlp_guitk/__main__.py"
+yt-dlp-guitk = { source = "yt_dlp_guitk/__main__.py", type = "onefile" }
 
 [tool.black]
 line-length = 120

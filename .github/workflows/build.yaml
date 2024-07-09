@@ -1,4 +1,5 @@
 name: Build
+
 on:
   push:
     branches:
@@ -6,6 +7,9 @@ on:
     tags:
       - "**"
   pull_request:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -18,8 +22,6 @@ jobs:
         python-version: ["3.11"]
         poetry-version: ["1.8.3"]
     runs-on: ${{ matrix.runs-on }}
-    outputs:
-      app-version: ${{ steps.get-version.outputs.APP_VERSION }}
     steps:
       - name: Checkout project
         uses: actions/checkout@v4
@@ -45,18 +47,16 @@ jobs:
       - name: Run tests
         if: false # TODO: Enable once tests are set up
         run: poetry run pytest -v
-      - name: Get version
-        id: get-version
+      - name: Prepare artifacts
         if: startsWith(github.ref, 'refs/tags/')
         run: |
-          echo "::set-output name=APP_VERSION::$(poetry version -s)"
+          python scripts/prepare_artifacts.py ${{ matrix.runs-on }} $(poetry version -s)
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          name: yt-dlp-guitk_${{ steps.get-version-step.outputs.APP_VERSION }}_${{ matrix.runs-on }}
-          # TODO: Handle filename for other platforms when enabling them
-          path: dist/pyinstaller/*/yt-dlp-guitk/yt-dlp-guitk.exe
+          name: yt-dlp-guitk_${{ matrix.runs-on }}
+          path: artifacts/*
   release:
     runs-on: ubuntu-latest
     needs: [build]
@@ -66,12 +66,16 @@ jobs:
         id: download-artifacts
         uses: actions/download-artifact@v4
         with:
-          path: yt-dlp-guitk
+          path: artifacts/
           pattern: yt-dlp-guitk_*
           merge-multiple: true
-      - name: Release
+      - name: Print files
+        run: |
+          tree -L 6
+      - name: Create release
         uses: softprops/action-gh-release@v2
         with:
+          # TODO: set as pre-release when appropriate
           files: |
             ${{ steps.download-artifacts.outputs.download-path }}/*
-          token: ${{ secrets.GITHUB_TOKEN }}pe
+          token: ${{ secrets.GITHUB_TOKEN }}
