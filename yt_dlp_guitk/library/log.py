@@ -11,7 +11,11 @@ def configure(remove_existing=True):
     if remove_existing:
         logger.remove()
 
-    stderr_level = env.get("LOG_STDERR_LEVEL", "ERROR")
+    if env.get("DEBUG", "0") == "1":
+        stderr_level = "DEBUG"
+    else:
+        stderr_level = env.get("LOG_STDERR_LEVEL", "ERROR")
+
     if stderr_level:
         logger.add(sys.stderr, level=stderr_level)
 

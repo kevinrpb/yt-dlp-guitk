@@ -543,14 +543,18 @@ typing = ["typing-extensions (>=4.8)"]
 
 [[package]]
 name = "guitk"
-version = "0.4.3"
+version = "0.4.4"
 description = "Python GUI Toolkit for Tk (guitk): simplify the layout and construction of tkinter graphical user interfaces in python."
 optional = false
-python-versions = ">=3.9,<4.0"
-files = [
-    {file = "guitk-0.4.3-py3-none-any.whl", hash = "sha256:0e1c257eb34589fc7c23ddfb172f5542780d6e5b22684969da6d29d4576af4af"},
-    {file = "guitk-0.4.3.tar.gz", hash = "sha256:dad8cd3dcc6cccbe3a402954f9b369be2fc3283ca5ddc7f2974dd987feac32bb"},
-]
+python-versions = "^3.9"
+files = []
+develop = false
+
+[package.source]
+type = "git"
+url = "https://github.com/kevinrpb/guitk"
+reference = "stack-axis-expand"
+resolved_reference = "ea0c249dcb108ccdd273a3a8163902fa3053a2ae"
 
 [[package]]
 name = "html5lib"
@@ -1419,4 +1423,4 @@ test = ["pytest (>=8.1,<9.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "fb5d3c7b98d97d2134fdf97bb5426cf19ad4113d11e9b8595ee91491aefa2a6c"
+content-hash = "7f067edfdf903b5e74402227ad64f672e542de23613122d120c592e8470f8ba2"

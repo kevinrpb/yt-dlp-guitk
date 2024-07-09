@@ -17,7 +17,7 @@ yt-dlp-guitk = 'yt_dlp_guitk.app:main'
 python = "^3.11"
 python-dotenv = "^1.0.1"
 loguru = "^0.7.2"
-guitk = "^0.4.3"
+guitk = {git = "https://github.com/kevinrpb/guitk", rev = "stack-axis-expand"}
 yt-dlp = "^2024.7.8"
 
 platformdirs = "^4.2.2"

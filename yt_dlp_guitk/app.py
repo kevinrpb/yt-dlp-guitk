@@ -1,27 +1,16 @@
-import tkinter as tk
-
 import guitk as ui
 from loguru import logger
 
-from .library import log
-
-
-class MainWindow(ui.Window):
-    def config(self):
-        self.title = "yt-dlp-guitk"
-        self.size = (500, 300)
-
-        with ui.VLayout():
-            with ui.VStack(valign=tk.CENTER, halign=tk.CENTER):
-                ui.Label("Hello world")
-
-    def setup(self):
-        self.window.minsize(500, 300)
+from .gui.window import MainWindow
+from .library import env, log
 
 
 def main():
     try:
         log.configure()
+
+        if env.get("DEBUG", "0") == "1":
+            ui.set_debug(True)
 
         logger.trace("Launching main window")
         window = MainWindow()
