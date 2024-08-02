@@ -9,7 +9,7 @@ def main():
     try:
         log.configure()
 
-        if env.get("DEBUG", "0") == "1":
+        if env.DEBUG_GUITK:
             ui.set_debug(True)
 
         logger.trace("Launching main window")

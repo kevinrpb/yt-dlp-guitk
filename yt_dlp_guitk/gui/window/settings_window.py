@@ -18,10 +18,10 @@ class SettingsWindow(ui.Window):
         self.size = (500, 300)
 
         with ui.VLayout():
-            with ui.HStack(vexpand=False):
-                ui.Label("Output directory")
-                ui.Entry(key="entry.output_directory", default=Settings.OUTPUT_DIRECTORY.get())
-                ui.BrowseDirectoryButton("Output directory", key="button.output_directory", target_key="entry.output_directory")
+            with ui.VStack():
+                with ui.HStack(vexpand=False):
+                    ui.LabelEntry("Output directory", key="entry.output_directory", default=Settings.OUTPUT_DIRECTORY.get(), weightx=10, sticky="we")
+                    ui.BrowseDirectoryButton("Browse", key="button.output_directory", target_key="entry.output_directory")
 
     def setup(self):
         self.window.minsize(500, 300)
@@ -34,6 +34,7 @@ class SettingsWindow(ui.Window):
 
         self._on_setting_change(setting, new_value)
 
+    @ui.on("entry.output_directory")
     @ui.on("button.output_directory")
     def on_output_directory_change(self):
         new_value = self["entry.output_directory"].value

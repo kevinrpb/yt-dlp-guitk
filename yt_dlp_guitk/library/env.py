@@ -16,3 +16,7 @@ def get(name: str, default: Optional[str] = None) -> str:
         return default
     else:
         raise Exception(f"{name} environment variable is not set.")
+
+
+DEBUG_APP = get("DEBUG", "0") == "1"
+DEBUG_GUITK = get("DEBUG_GUITK", "0") == "1"
