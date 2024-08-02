@@ -7,7 +7,7 @@ from ...library import env
 from ...library.humanize import bytes_to_human
 from ...library.log import logger
 from ...library.settings import Settings
-from ...yt_dlp import YtWorker, YtWorkerAction, YtWorkerMessage
+from ...yt_dlp import YtWorker, YtWorkerCommand, YtWorkerMessage
 from .base_window import BaseWindow
 from .settings_window import SettingsWindow
 
@@ -148,10 +148,10 @@ class MainWindow(BaseWindow):
             if not isinstance(message, YtWorkerMessage):
                 raise ValueError(f"Found unexpected message in worker queue: {message}")
 
-            if message.action == YtWorkerAction.ERROR:
+            if message.command == YtWorkerCommand.ERROR:
                 logger.error(f"Encountered error message in worker queue: {message.content}")
 
-            if message.action == YtWorkerAction.GET_INFO:
+            if message.command == YtWorkerCommand.GET_URL_INFO:
                 self.on_video_info_loaded(message.content)
         except Empty:
             self.root.after(WORKER_QUEUE_PROCESS_DELAY, self.process_worker_queue)
@@ -235,7 +235,7 @@ class MainWindow(BaseWindow):
         if url in self._urls_info.keys():
             self.on_video_info_loaded(self._urls_info[url])
         else:
-            self._run_worker(YtWorkerAction.GET_INFO, url)
+            self._run_worker(YtWorkerCommand.GET_URL_INFO, url)
 
     @ui.on("combobox.audio_format")
     def audio_format_selection_changed(self):
@@ -278,6 +278,6 @@ class MainWindow(BaseWindow):
     def on_setting_change(self, setting: Settings, new_value: any):
         logger.debug(f"Setting <{setting}> changed to <{new_value}>")
 
-    def _run_worker(self, action: YtWorkerAction, *args):
+    def _run_worker(self, action: YtWorkerCommand, *args):
         YtWorker(self._worker_queue, action, *args).start()
         self.root.after(WORKER_QUEUE_PROCESS_DELAY, self.process_worker_queue)

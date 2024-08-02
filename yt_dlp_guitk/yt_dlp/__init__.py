@@ -10,44 +10,47 @@ from yt_dlp import YoutubeDL
 from ..library.log import logger
 
 
-class YtWorkerAction(Enum):
+class YtWorkerCommand(Enum):
     ERROR = "ERROR"
-    GET_INFO = "GET_INFO"
+    GET_URL_INFO = "GET_URL_INFO"
 
 
 @dataclass
 class YtWorkerMessage:
-    action: YtWorkerAction
+    command: YtWorkerCommand
     content: any
 
     @staticmethod
     def error(content) -> YtWorkerMessage:
-        return YtWorkerMessage(YtWorkerAction.ERROR, content)
+        return YtWorkerMessage(YtWorkerCommand.ERROR, content)
 
     @staticmethod
     def yt_info(content) -> YtWorkerMessage:
-        return YtWorkerMessage(YtWorkerAction.GET_INFO, content)
+        return YtWorkerMessage(YtWorkerCommand.GET_URL_INFO, content)
 
 
 class YtWorker(Thread):
     queue: Queue[YtWorkerMessage]
-    action: YtWorkerAction
+    action: YtWorkerCommand
     args: tuple
 
-    def __init__(self, queue: Queue, action: YtWorkerAction, *args):
+    def __init__(self, queue: Queue, action: YtWorkerCommand, *args):
         Thread.__init__(self)
         self.queue = queue
         self.action = action
         self.args = args
 
     def run(self):
-        if self.action == YtWorkerAction.GET_INFO:
-            self._load_yt_info(*self.args)
+        if self.action == YtWorkerCommand.GET_URL_INFO:
+            self._get_url_info(*self.args)
 
-    def _load_yt_info(self, url: str):
+    def _get_url_info(self, url: str):
         logger.debug(f"Loading yt info for url <{url}>")
+
+        ytl_dl_options = {"logger": logger}
+
         try:
-            with YoutubeDL() as ydl:
+            with YoutubeDL(ytl_dl_options) as ydl:
                 info = ydl.extract_info(url, download=False)
                 info = ydl.sanitize_info(info)
         except Exception as e:
