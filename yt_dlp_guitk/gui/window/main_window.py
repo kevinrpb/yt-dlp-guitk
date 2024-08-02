@@ -6,25 +6,24 @@ from ...library import env
 from ...library.log import logger
 from ...library.settings import Settings
 from ...yt_dlp import YtWorker, YtWorkerAction, YtWorkerMessage
+from .base_window import BaseWindow
 from .settings_window import SettingsWindow
 
 WORKER_QUEUE_PROCESS_DELAY = 1000
 
 
-class MainWindow(ui.Window):
+class MainWindow(BaseWindow):
+    _size = (500, 300)
     _ui_keys = ["entry.url", "button.load_url"]
     _worker_queue: Queue[YtWorkerMessage] = None
     _is_loading: bool = False
 
     def __init__(self):
-        ui.Window.__init__(self, pady=0)
+        BaseWindow.__init__(self, title="yt-dlp-guitk", size=self._size, min_size=self._size, pady=0)
 
         self._worker_queue = Queue()
 
     def config(self):
-        self.title = "yt-dlp-guitk"
-        self.size = (500, 300)
-
         with ui.VLayout():
             with ui.HStack(vexpand=False):
                 ui.Entry(key="entry.url", sticky="nswe", weightx=1)
@@ -41,8 +40,6 @@ class MainWindow(ui.Window):
                 ui.Command("Settings", key="menu.app.open_settings", shortcut="Cmd+,")
 
     def setup(self):
-        self.window.minsize(500, 300)
-
         if env.DEBUG_APP:
             self["entry.url"].value = "https://youtu.be/FtutLA63Cp8"
 
@@ -62,7 +59,7 @@ class MainWindow(ui.Window):
             if message.action == YtWorkerAction.GET_INFO:
                 self.load_info_ui(message.content)
         except Empty:
-            self._tk.root.after(WORKER_QUEUE_PROCESS_DELAY, self.process_worker_queue)
+            self.root.after(WORKER_QUEUE_PROCESS_DELAY, self.process_worker_queue)
             pass
         except Exception as e:
             logger.error(f"Error while processing worker queue: {e}")
@@ -99,4 +96,4 @@ class MainWindow(ui.Window):
 
     def _run_worker(self, action: YtWorkerAction, *args):
         YtWorker(self._worker_queue, action, *args).start()
-        self._tk.root.after(WORKER_QUEUE_PROCESS_DELAY, self.process_worker_queue)
+        self.root.after(WORKER_QUEUE_PROCESS_DELAY, self.process_worker_queue)
