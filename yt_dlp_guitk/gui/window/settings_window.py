@@ -18,14 +18,16 @@ class SettingsWindow(BaseWindow):
     def config(self):
         with ui.VLayout():
             with ui.HStack(vexpand=False):
-                ui.LabelEntry(
-                    "Output directory:",
+                ui.Label("Output directory:", pady=(8, 0))
+                ui.Entry(
                     key="entry.output_directory",
                     default=Settings.OUTPUT_DIRECTORY.get(),
                     weightx=10,
-                    sticky="we",
+                    sticky="nswe",
                 )
-                ui.BrowseDirectoryButton("Browse", key="button.output_directory", target_key="entry.output_directory")
+                ui.BrowseDirectoryButton(
+                    "Browse", key="button.output_directory", target_key="entry.output_directory", pady=(3, 1)
+                )
 
             with ui.VStack(vexpand=True):
                 pass

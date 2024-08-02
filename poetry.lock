@@ -574,6 +574,20 @@ genshi = ["genshi"]
 lxml = ["lxml"]
 
 [[package]]
+name = "humanize"
+version = "4.10.0"
+description = "Python humanize utilities"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "humanize-4.10.0-py3-none-any.whl", hash = "sha256:39e7ccb96923e732b5c2e27aeaa3b10a8dfeeba3eb965ba7b74a3eb0e30040a6"},
+    {file = "humanize-4.10.0.tar.gz", hash = "sha256:06b6eb0293e4b85e8d385397c5868926820db32b9b654b932f57fa41c23c9978"},
+]
+
+[package.extras]
+tests = ["freezegun", "pytest", "pytest-cov"]
+
+[[package]]
 name = "identify"
 version = "2.6.0"
 description = "File identification library for Python"
@@ -1419,4 +1433,4 @@ test = ["pytest (>=8.1,<9.0)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "7ae1465c52b2b87b92204bce1ad36d85dcdfe611f60db581b0493fdbea3e1e38"
+content-hash = "8802514c2310a141cfd489ac8422d580ba264c29f21e00bb5f496a16df12e223"

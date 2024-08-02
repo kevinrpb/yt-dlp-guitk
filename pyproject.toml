@@ -21,6 +21,7 @@ guitk = "^0.4.4"
 yt-dlp = "^2024.7.8"
 
 platformdirs = "^4.2.2"
+humanize = "^4.10.0"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0.0"
 black = "^24.1.1"
