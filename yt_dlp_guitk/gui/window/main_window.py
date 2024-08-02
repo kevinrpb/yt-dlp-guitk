@@ -152,7 +152,10 @@ class MainWindow(BaseWindow):
                 logger.error(f"Encountered error message in worker queue: {message.content}")
 
             if message.command == YtWorkerCommand.GET_URL_INFO:
-                self.on_video_info_loaded(message.content)
+                self.on_url_info_loaded(message.content)
+
+            if message.command == YtWorkerCommand.DOWNLOAD_URL:
+                self.on_url_downloaded(message.content)
         except Empty:
             self.root.after(WORKER_QUEUE_PROCESS_DELAY, self.process_worker_queue)
             pass
@@ -201,7 +204,7 @@ class MainWindow(BaseWindow):
 
         self["combobox.video_format"].combobox["values"] = _DEFAULT_VIDEO_FORMAT_LIST + labels
 
-    def on_video_info_loaded(self, info: dict | None = None):
+    def on_url_info_loaded(self, info: dict | None = None):
         if info is None:
             self["combobox.audio_format"].value = _DEFAULT_AUDIO_FORMAT
             self["combobox.audio_format"].combobox["values"] = _DEFAULT_AUDIO_FORMAT_LIST
@@ -219,21 +222,26 @@ class MainWindow(BaseWindow):
 
         self.set_loading(False)
 
+    def on_url_downloaded(self, result: int):
+        logger.info(f"URL download result: {result}")
+
+        self.set_loading(False)
+
     @ui.on("entry.url")
     def url_entry_changed(self):
         # Try updating UI with known info, or reset it
         url = self["entry.url"].value
-        self.on_video_info_loaded(self._urls_info.get(url, None))
+        self.on_url_info_loaded(self._urls_info.get(url, None))
 
     @ui.on("button.load_formats")
-    def load_video_info(self):
+    def load_url_info(self):
         url = self["entry.url"].value
 
         self.set_loading(True)
 
         # If we already have this info, use it directly. Otherwise download it.
         if url in self._urls_info.keys():
-            self.on_video_info_loaded(self._urls_info[url])
+            self.on_url_info_loaded(self._urls_info[url])
         else:
             self._run_worker(YtWorkerCommand.GET_URL_INFO, url)
 
@@ -270,6 +278,16 @@ class MainWindow(BaseWindow):
 
             label = f"{size} - {codec}"
             self["label.video_format_details"].value = f"({label})"
+
+    @ui.on("button.download")
+    def download_url(self):
+        url = self["entry.url"].value
+        dest_dirpath = Settings.OUTPUT_DIRECTORY.get()
+        audio_format = self["combobox.audio_format"].value.split("-")[0].strip()
+        video_format = self["combobox.video_format"].value.split("-")[0].strip()
+
+        self.set_loading(True)
+        self._run_worker(YtWorkerCommand.DOWNLOAD_URL, url, dest_dirpath, audio_format, video_format)
 
     @ui.on("menu.app.open_settings")
     def open_settings(self):
