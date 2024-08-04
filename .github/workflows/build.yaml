@@ -51,6 +51,7 @@ jobs:
         run: poetry run pytest -v
       - name: Get app version
         id: get-app-version
+        shell: bash
         run: |
           app_version=$(poetry version -s)
           echo "app_version=$app_version"
