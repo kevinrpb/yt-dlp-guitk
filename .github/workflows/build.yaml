@@ -90,11 +90,11 @@ jobs:
           fi
       - name: Print files
         run: |
-          tree -L 6
+          tree -L 2
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ${{ steps.download-artifacts.outputs.download-path }}/*
+            ${{ steps.download-artifacts.outputs.download-path }}/*.+(exe|app)
           token: ${{ secrets.GITHUB_TOKEN }}
-          prerelease: ${{ needs.build.outputs.is_prerelease }}
+          prerelease: ${{ steps.check-prerelease.outputs.is_prerelease }}
