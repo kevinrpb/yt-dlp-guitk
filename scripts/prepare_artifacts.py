@@ -22,17 +22,28 @@ src_filepaths = {
     MatrixRunsOn.WINDOWS_LATEST: src_dirpath / Path("win_amd64/yt-dlp-guitk.exe"),
 }
 
+platform_names = {
+    MatrixRunsOn.MACOS_14: "macOS",
+    MatrixRunsOn.WINDOWS_LATEST: "Windows",
+}
+
+
+ARCHIVE_FORMAT = "zip"
+
 
 def main():
     runs_on = MatrixRunsOn(sys.argv[1])
     app_version = sys.argv[2]
 
+    platform_name = platform_names[runs_on]
+
     src_filepath = src_filepaths[runs_on]
-    dst_filepath = dst_dirpath / Path(f"yt-dlp-guitk_{app_version}_{runs_on.value}{src_filepath.suffix}")
+    dst_filepath = dst_dirpath / Path(f"yt-dlp-guitk_{app_version}_{platform_name}{src_filepath.suffix}")
 
     print(
         f"""
 runs_on: {runs_on}
+platform_name: {platform_name}
 app_version: {app_version}
 src: {src_filepath}
 dst: {dst_filepath}
