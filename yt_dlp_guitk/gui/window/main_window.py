@@ -9,7 +9,6 @@ from ...library.log import logger
 from ...library.settings import Settings
 from ...yt_dlp import YtWorker, YtWorkerCommand, YtWorkerMessage
 from .base_window import BaseWindow
-from .settings_window import SettingsWindow
 
 WORKER_QUEUE_PROCESS_DELAY = 1000
 
@@ -44,6 +43,9 @@ class MainWindow(BaseWindow):
         "button.reset_options",
         "combobox.audio_format",
         "combobox.video_format",
+        "checkbutton.merge_files",
+        "entry.output_directory",
+        "button.output_directory",
         "button.download",
     ]
     _worker_queue: Queue[YtWorkerMessage] = None
@@ -120,9 +122,33 @@ class MainWindow(BaseWindow):
                         with ui.HStack(vexpand=False, padding=(0, 8)):
                             ui.CheckButton(
                                 "Merge",
-                                key="checkbutton.merge",
+                                key="checkbutton.merge_files",
                                 checked=True,
                                 tooltip="Merge audio and video files into a single file",
+                                disabled=(not env.FFMPEG_PRESENT),
+                            )
+
+                            if not env.FFMPEG_PRESENT:
+                                ui.Label(
+                                    "(! ffmpeg not installed)",
+                                    tooltip="ffmpeg is needed to merge audio and video files. To install it, go to https://ffmpeg.org/download.html",
+                                ).style(foreground="gray")
+
+                        ui.HSeparator()
+
+                        with ui.HStack(vexpand=False, padding=(0, 8)):
+                            ui.Label("Output directory:", pady=(3, 0))
+                            ui.Entry(
+                                key="entry.output_directory",
+                                default=Settings.OUTPUT_DIRECTORY.get(),
+                                weightx=10,
+                                sticky="nswe",
+                            )
+                            ui.BrowseDirectoryButton(
+                                "Browse",
+                                key="button.output_directory",
+                                target_key="entry.output_directory",
+                                # pady=(3, 1),
                             )
 
             with ui.HStack(vexpand=False, padding=0):
@@ -130,9 +156,9 @@ class MainWindow(BaseWindow):
                 ui.HSpacer()
                 ui.Button("Download", key="button.download")
 
+        # Disable unwanted menus
         with ui.MenuBar():
-            with ui.Menu("App"):
-                ui.Command("Settings", key="menu.app.open_settings", shortcut="Cmd+,")
+            pass
 
     def setup(self):
         if env.DEBUG_APP:
@@ -141,6 +167,10 @@ class MainWindow(BaseWindow):
     def handle_event(self, event: ui.Event):
         logger.debug(f"Got event: {event}")
         return super().handle_event(event)
+
+    def update_setting(self, setting: Settings, new_value: any):
+        logger.debug(f"Setting <{setting}> changed to <{new_value}>")
+        setting.set(new_value)
 
     def process_worker_queue(self):
         try:
@@ -161,13 +191,20 @@ class MainWindow(BaseWindow):
             pass
         except Exception as e:
             logger.error(f"Error while processing worker queue: {e}")
-            self.set_loading(False)
+            self.set_ui_disabled(False)
 
-    def set_loading(self, loading: bool = True):
+    def set_ui_disabled(self, disabled: bool = True, disabled_status: str = "Loading...", enabled_status: str = ""):
         for key in self._loading_ui_keys:
-            self[key].disabled = loading
+            if not disabled and key == "button.open_format_list_window":
+                # When re-enabling UI, this button should only be enabled if we have the info
+                self[key].disabled = self.url not in self._urls_info.keys()
+            elif not disabled and key == "checkbutton.merge_files":
+                # This button also depends on ffmpeg being present
+                self[key].disabled = not env.FFMPEG_PRESENT
+            else:
+                self[key].disabled = disabled
 
-        self["label.status"].value = "Loading..." if loading else ""
+        self["label.status"].value = disabled_status if disabled else enabled_status
 
     def update_audio_formats(self):
         audio_formats = [
@@ -213,31 +250,33 @@ class MainWindow(BaseWindow):
             self["combobox.video_format"].combobox["values"] = _DEFAULT_VIDEO_FORMAT_LIST
             self["label.video_format_details"].value = _VIDEO_FORMAT_DETAILS[_DEFAULT_VIDEO_FORMAT]
         else:
-            url = self["entry.url"].value
-            self._urls_info[url] = info
+            self._urls_info[self.url] = info
             self._download_formats = {item["format_id"]: item for item in info.get("formats", [])}
 
             self.update_audio_formats()
             self.update_video_formats()
 
-        self.set_loading(False)
+        self.set_ui_disabled(False)
 
     def on_url_downloaded(self, result: int):
         logger.info(f"URL download result: {result}")
 
-        self.set_loading(False)
+        self.set_ui_disabled(False, enabled_status="Download complete")
+
+    @property
+    def url(self):
+        return self["entry.url"].value
 
     @ui.on("entry.url")
     def url_entry_changed(self):
         # Try updating UI with known info, or reset it
-        url = self["entry.url"].value
-        self.on_url_info_loaded(self._urls_info.get(url, None))
+        self.on_url_info_loaded(self._urls_info.get(self.url, None))
 
     @ui.on("button.load_formats")
     def load_url_info(self):
-        url = self["entry.url"].value
+        url = self.url
 
-        self.set_loading(True)
+        self.set_ui_disabled(True)
 
         # If we already have this info, use it directly. Otherwise download it.
         if url in self._urls_info.keys():
@@ -281,20 +320,19 @@ class MainWindow(BaseWindow):
 
     @ui.on("button.download")
     def download_url(self):
-        url = self["entry.url"].value
         dest_dirpath = Settings.OUTPUT_DIRECTORY.get()
         audio_format = self["combobox.audio_format"].value.split("-")[0].strip()
         video_format = self["combobox.video_format"].value.split("-")[0].strip()
 
-        self.set_loading(True)
-        self._run_worker(YtWorkerCommand.DOWNLOAD_URL, url, dest_dirpath, audio_format, video_format)
+        self.set_ui_disabled(True, disabled_status="Downloading...")
+        self._run_worker(YtWorkerCommand.DOWNLOAD_URL, self.url, dest_dirpath, audio_format, video_format)
 
-    @ui.on("menu.app.open_settings")
-    def open_settings(self):
-        SettingsWindow(self.on_setting_change)
+    @ui.on("entry.output_directory")
+    @ui.on("button.output_directory")
+    def on_output_directory_change(self):
+        new_value = self["entry.output_directory"].value
 
-    def on_setting_change(self, setting: Settings, new_value: any):
-        logger.debug(f"Setting <{setting}> changed to <{new_value}>")
+        self.update_setting(Settings.OUTPUT_DIRECTORY, new_value)
 
     def _run_worker(self, action: YtWorkerCommand, *args):
         YtWorker(self._worker_queue, action, *args).start()

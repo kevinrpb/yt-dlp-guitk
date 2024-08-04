@@ -1,4 +1,5 @@
 import os
+import shutil
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -20,3 +21,5 @@ def get(name: str, default: Optional[str] = None) -> str:
 
 DEBUG_APP = get("DEBUG", "0") == "1"
 DEBUG_GUITK = get("DEBUG_GUITK", "0") == "1"
+
+FFMPEG_PRESENT = shutil.which("ffmpeg") is not None
