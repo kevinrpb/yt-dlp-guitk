@@ -83,7 +83,7 @@ jobs:
       - name: Check prerelease
         id: check-prerelease
         run: |
-          if [[ ${{ needs.build.outputs.app_version }} =~ ^([0-9]+\.?)+-(alpha|beta)\.[0-9]+$ ]]; then
+          if [[ ${{ needs.build.outputs.app_version }} =~ ^([0-9]+\.?)+-(alpha|beta|a|b)\.[0-9]+$ ]]; then
             echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
           else
             echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
