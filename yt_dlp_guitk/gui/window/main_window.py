@@ -9,6 +9,7 @@ from ...library.log import logger
 from ...library.settings import Settings
 from ...yt_dlp import YtWorker, YtWorkerCommand, YtWorkerMessage
 from .base_window import BaseWindow
+from .debug_window import DebugWindow
 
 WORKER_QUEUE_PROCESS_DELAY = 1000
 
@@ -156,9 +157,11 @@ class MainWindow(BaseWindow):
                 ui.HSpacer()
                 ui.Button("Download", key="button.download")
 
-        # Disable unwanted menus
+        # Just having this will disable all 'default' menus (File, Edit, etc)
         with ui.MenuBar():
-            pass
+            if env.DEBUG_APP:
+                with ui.Menu("Debug"):
+                    ui.Command("Debug window", key="menu.debug.open_debug_window", shortcut="Cmd+D")
 
     def setup(self):
         if env.DEBUG_APP:
@@ -333,6 +336,10 @@ class MainWindow(BaseWindow):
         new_value = self["entry.output_directory"].value
 
         self.update_setting(Settings.OUTPUT_DIRECTORY, new_value)
+
+    @ui.on("menu.debug.open_debug_window")
+    def open_debug_window(self):
+        DebugWindow(parent=self.window)
 
     def _run_worker(self, action: YtWorkerCommand, *args):
         YtWorker(self._worker_queue, action, *args).start()
