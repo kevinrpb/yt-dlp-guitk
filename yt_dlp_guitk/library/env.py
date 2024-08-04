@@ -1,5 +1,6 @@
 import os
 import shutil
+from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -22,4 +23,7 @@ def get(name: str, default: Optional[str] = None) -> str:
 DEBUG_APP = get("DEBUG", "0") == "1"
 DEBUG_GUITK = get("DEBUG_GUITK", "0") == "1"
 
-FFMPEG_PRESENT = shutil.which("ffmpeg") is not None
+# ffmpeg detection
+_FFMPEG_LOCATIONS = [shutil.which("ffmpeg"), "/opt/homebrew/bin/ffmpeg"]
+FFMPEG_PATH = next(loc for loc in _FFMPEG_LOCATIONS if loc is not None and Path(loc).exists())
+FFMPEG_PRESENT = FFMPEG_PATH is not None

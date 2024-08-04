@@ -7,6 +7,7 @@ from threading import Thread
 
 from yt_dlp import YoutubeDL
 
+from ..library import env
 from ..library.log import logger
 
 
@@ -81,14 +82,15 @@ class YtWorker(Thread):
         if get_video:
             format = format + (video_format if video_format != "best" else "bv")
 
-        logger.debug(f"Will use format <{format}>")
-
         ytl_dl_options = {
             "format": format,
             "outtmpl": f"{dest_dirpath}/%(title)s.%(ext)s",
+            "ffmpeg_location": env.FFMPEG_PATH,
             "logger": logger,
             "progress_hooks": [],
         }
+
+        logger.debug(f"yt-dl options: {ytl_dl_options}")
 
         try:
             with YoutubeDL(ytl_dl_options) as ydl:
