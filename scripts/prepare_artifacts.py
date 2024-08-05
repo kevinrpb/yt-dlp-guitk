@@ -14,12 +14,12 @@ class MatrixRunsOn(Enum):
 
 
 root_dirpath = Path(__file__).parent.parent.resolve()
-src_dirpath = root_dirpath / Path("dist/pyinstaller")
+src_dirpath = root_dirpath / Path("dist")
 dst_dirpath = root_dirpath / Path("artifacts")
 
 src_filepaths = {
-    MatrixRunsOn.MACOS_14: src_dirpath / Path("macosx_14_0_arm64/yt-dlp-guitk.app"),
-    MatrixRunsOn.WINDOWS_LATEST: src_dirpath / Path("win_amd64/yt-dlp-guitk.exe"),
+    MatrixRunsOn.MACOS_14: src_dirpath / Path("yt-dlp-guitk.zip"),
+    MatrixRunsOn.WINDOWS_LATEST: src_dirpath / Path("yt-dlp-guitk.exe"),
 }
 
 platform_names = {
@@ -27,8 +27,7 @@ platform_names = {
     MatrixRunsOn.WINDOWS_LATEST: "Windows",
 }
 
-
-ARCHIVE_FORMAT = "zip"
+needs_zip = [MatrixRunsOn.WINDOWS_LATEST]
 
 
 def main():
@@ -40,6 +39,8 @@ def main():
     src_filepath = src_filepaths[runs_on]
     dst_filepath = dst_dirpath / Path(f"yt-dlp-guitk_{app_version}_{platform_name}{src_filepath.suffix}")
 
+    do_zip = runs_on in needs_zip
+
     print(
         f"""
 runs_on: {runs_on}
@@ -47,8 +48,18 @@ platform_name: {platform_name}
 app_version: {app_version}
 src: {src_filepath}
 dst: {dst_filepath}
+do_zip: {do_zip}
     """
     )
+
+    # Check if we need to zip it first
+    if do_zip:
+        zip_filepath = src_dirpath / "tmp.zip"
+
+        shutil.make_archive(src_filepath, "zip", src_filepath.parent, zip_filepath.name)
+
+        # Set src_filepath as the zip
+        src_filepath = zip_filepath
 
     os.makedirs(dst_dirpath, exist_ok=True)
 

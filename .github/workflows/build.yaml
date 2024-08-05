@@ -40,11 +40,9 @@ jobs:
         with:
           path: ./.venv
           key: venv-${{ hashFiles('poetry.lock') }}
-      - name: Install PyInstaller plugin
-        run: poetry self add poetry-pyinstaller-plugin
       - name: Install dependencies
         run: poetry install
-      - name: Build app
+      - name: Build package
         run: poetry build
       - name: Run tests
         if: false # TODO: Enable once tests are set up
@@ -56,6 +54,28 @@ jobs:
           app_version=$(poetry version -s)
           echo "app_version=$app_version"
           echo "app_version=$app_version" >> "$GITHUB_OUTPUT"
+      - name: Set up keychain
+        if: startsWith(github.ref, 'refs/tags/') && startsWith(${{ matrix.runs-on }}, 'macos-')
+        run: ./scripts/setup_keychain.sh
+        env:
+          DEVELOPER_ID_INSTALLER_CER: ${{ secrets.DEVELOPER_ID_INSTALLER_CER }}
+          DEVELOPER_ID_INSTALLER_KEY: ${{ secrets.DEVELOPER_ID_INSTALLER_KEY }}
+          DEVELOPER_ID_APPLICATION_CER: ${{ secrets.DEVELOPER_ID_APPLICATION_CER }}
+          DEVELOPER_ID_APPLICATION_KEY: ${{ secrets.DEVELOPER_ID_APPLICATION_KEY }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+      - name: Build executable
+        if: startsWith(github.ref, 'refs/tags/')
+        run: ./scripts/build_executable.sh
+        env:
+          CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
+      - name: Notarize app
+        if: startsWith(github.ref, 'refs/tags/') && startsWith(${{ matrix.runs-on }}, 'macos-')
+        run: ./scripts/notarize_app.sh
+      - name: Cleanup keychain
+        if: startsWith(github.ref, 'refs/tags/') && startsWith(${{ matrix.runs-on }}, 'macos-')
+        run: security delete-keychain $RUNNER_TEMP/notarization.keychain-db
       - name: Prepare artifacts
         if: startsWith(github.ref, 'refs/tags/')
         run: |
@@ -95,6 +115,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ${{ steps.download-artifacts.outputs.download-path }}/*.+(exe|app)
+            ${{ steps.download-artifacts.outputs.download-path }}/*.zip
           token: ${{ secrets.GITHUB_TOKEN }}
           prerelease: ${{ steps.check-prerelease.outputs.is_prerelease }}
