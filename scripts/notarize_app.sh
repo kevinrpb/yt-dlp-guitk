@@ -10,7 +10,7 @@ xcrun notarytool store-credentials "$KEYCHAIN_PROFILE" \
   --keychain "$KEYCHAIN_PATH"
 
 # Create zip for notarization
-rm "dist/yt_dlp_guitk.zip"
+rm -f "dist/yt-dlp-guitk.zip"
 ditto -c -k --sequesterRsrc --keepParent "dist/yt-dlp-guitk.app" "dist/yt-dlp-guitk.zip"
 
 # Notarize
@@ -23,5 +23,5 @@ xcrun notarytool submit "dist/yt-dlp-guitk.zip" \
 xcrun stapler staple "dist/yt-dlp-guitk.app"
 
 # Rezip stapled file
-rm "dist/yt_dlp_guitk.zip"
+rm -f "dist/yt-dlp-guitk.zip"
 ditto -c -k --sequesterRsrc --keepParent "dist/yt-dlp-guitk.app" "dist/yt-dlp-guitk.zip"

@@ -18,7 +18,7 @@ jobs:
       matrix:
         # TODO: enable other platforms once I verify the app/build works
         # runs-on: [windows-latest, ubuntu-latest]
-        runs-on: [macos-14]
+        runs-on: [macos-14, windows-latest]
         python-version: ["3.11"]
         poetry-version: ["1.8.3"]
     runs-on: ${{ matrix.runs-on }}
@@ -50,19 +50,19 @@ jobs:
       - name: Get app version
         id: get-app-version
         shell: bash
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           app_version=$(poetry version -s)
           echo "app_version=$app_version"
           echo "app_version=$app_version" >> "$GITHUB_OUTPUT"
       - name: Set up keychain
-        if: startsWith(github.ref, 'refs/tags/') && startsWith(${{ matrix.runs-on }}, 'macos-')
+        if: |
+          startsWith(github.ref, 'refs/tags/') &&
+          startsWith(matrix.runs-on, 'macos-')
         run: ./scripts/setup_keychain.sh
         env:
-          DEVELOPER_ID_INSTALLER_CER: ${{ secrets.DEVELOPER_ID_INSTALLER_CER }}
-          DEVELOPER_ID_INSTALLER_KEY: ${{ secrets.DEVELOPER_ID_INSTALLER_KEY }}
-          DEVELOPER_ID_APPLICATION_CER: ${{ secrets.DEVELOPER_ID_APPLICATION_CER }}
-          DEVELOPER_ID_APPLICATION_KEY: ${{ secrets.DEVELOPER_ID_APPLICATION_KEY }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          DEVELOPER_ID_INSTALLER: ${{ secrets.DEVELOPER_ID_INSTALLER }}
+          DEVELOPER_ID_APPLICATION: ${{ secrets.DEVELOPER_ID_APPLICATION }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
       - name: Build executable
@@ -71,11 +71,22 @@ jobs:
         env:
           CODESIGN_IDENTITY: ${{ secrets.CODESIGN_IDENTITY }}
       - name: Notarize app
-        if: startsWith(github.ref, 'refs/tags/') && startsWith(${{ matrix.runs-on }}, 'macos-')
+        if: |
+          startsWith(github.ref, 'refs/tags/') &&
+          startsWith(matrix.runs-on, 'macos-')
         run: ./scripts/notarize_app.sh
+        env:
+          KEYCHAIN_PROFILE: ${{ secrets.KEYCHAIN_PROFILE }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+          NOTARYTOOL_PASSWORD: ${{ secrets.NOTARYTOOL_PASSWORD }}
       - name: Cleanup keychain
-        if: startsWith(github.ref, 'refs/tags/') && startsWith(${{ matrix.runs-on }}, 'macos-')
-        run: security delete-keychain $RUNNER_TEMP/notarization.keychain-db
+        if: |
+          startsWith(github.ref, 'refs/tags/') &&
+          startsWith(matrix.runs-on, 'macos-')
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          security delete-keychain "$KEYCHAIN_PATH"
       - name: Prepare artifacts
         if: startsWith(github.ref, 'refs/tags/')
         run: |
