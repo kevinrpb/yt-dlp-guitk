@@ -14,7 +14,7 @@ build-backend = "poetry.core.masonry.api"
 yt-dlp-guitk = 'yt_dlp_guitk.app:main'
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.11,<3.13"
 python-dotenv = "^1.0.1"
 loguru = "^0.7.2"
 guitk = "^0.4.4"
@@ -30,14 +30,7 @@ coverage = "^7.4.1"
 pre-commit = "^3.6.0"
 pip-audit = "^2.7.0"
 pyright = "^1.1.351"
-
-[tool.poetry-pyinstaller-plugin]
-version = "6.9.0"
-
-[tool.poetry-pyinstaller-plugin.scripts.yt-dlp-guitk]
-source = "yt_dlp_guitk/__main__.py"
-type = "onedir"
-windowed = true
+pyinstaller = "^6.9.0"
 
 [tool.black]
 line-length = 120
