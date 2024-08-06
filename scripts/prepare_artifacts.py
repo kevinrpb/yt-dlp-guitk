@@ -54,12 +54,12 @@ do_zip: {do_zip}
 
     # Check if we need to zip it first
     if do_zip:
-        zip_filepath = src_dirpath / "tmp.zip"
+        zip_filepath = src_dirpath / "tmp"
 
-        shutil.make_archive(src_filepath, "zip", src_filepath.parent, zip_filepath.name)
+        shutil.make_archive(zip_filepath, "zip", src_filepath.parent, src_filepath.name)
 
         # Set src_filepath as the zip
-        src_filepath = zip_filepath
+        src_filepath = f"{zip_filepath}.zip"
 
     os.makedirs(dst_dirpath, exist_ok=True)
 
