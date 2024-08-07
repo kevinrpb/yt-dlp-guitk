@@ -7,7 +7,7 @@
 #   --password "$NOTARYTOOL_PASSWORD" \
 
 # Create zip
-rm "dist/yt_dlp_guitk.zip"
+rm -f "dist/yt-dlp-guitk.zip"
 ditto -c -k --sequesterRsrc --keepParent "dist/yt-dlp-guitk.app" "dist/yt-dlp-guitk.zip"
 
 # Notarize
@@ -17,3 +17,7 @@ xcrun notarytool submit "dist/yt-dlp-guitk.zip" \
 
 # Staple
 xcrun stapler staple "dist/yt-dlp-guitk.app"
+
+# Rezip
+rm -f "dist/yt-dlp-guitk.zip"
+ditto -c -k --sequesterRsrc --keepParent "dist/yt-dlp-guitk.app" "dist/yt-dlp-guitk.zip"

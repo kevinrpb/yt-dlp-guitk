@@ -11,46 +11,58 @@ from ..library import env
 from ..library.log import logger
 
 
-class YtWorkerCommand(Enum):
+class YtWorkerMessageType(Enum):
     ERROR = "ERROR"
-    GET_URL_INFO = "GET_URL_INFO"
-    DOWNLOAD_URL = "DOWNLOAD_URL"
+    GET_URL_INFO_RESULT = "GET_URL_INFO_RESULT"
+    DOWNLOAD_URL_PROGRESS = "DOWNLOAD_URL_PROGRESS"
+    DOWNLOAD_URL_RESULT = "DOWNLOAD_URL_RESULT"
 
 
 @dataclass
 class YtWorkerMessage:
-    command: YtWorkerCommand
+    type: YtWorkerMessageType
     content: any
 
     @staticmethod
     def error(content) -> YtWorkerMessage:
-        return YtWorkerMessage(YtWorkerCommand.ERROR, content)
+        return YtWorkerMessage(YtWorkerMessageType.ERROR, content)
 
     @staticmethod
-    def url_info(content) -> YtWorkerMessage:
-        return YtWorkerMessage(YtWorkerCommand.GET_URL_INFO, content)
+    def url_info_result(content) -> YtWorkerMessage:
+        return YtWorkerMessage(YtWorkerMessageType.GET_URL_INFO_RESULT, content)
 
     @staticmethod
-    def download_url(content) -> YtWorkerMessage:
-        return YtWorkerMessage(YtWorkerCommand.DOWNLOAD_URL, content)
+    def download_url_progress(content) -> YtWorkerMessage:
+        return YtWorkerMessage(YtWorkerMessageType.DOWNLOAD_URL_PROGRESS, content)
+
+    @staticmethod
+    def download_url_result(content) -> YtWorkerMessage:
+        return YtWorkerMessage(YtWorkerMessageType.DOWNLOAD_URL_RESULT, content)
+
+
+class YtWorkerCommand(Enum):
+    GET_URL_INFO = "GET_URL_INFO"
+    DOWNLOAD_URL = "DOWNLOAD_URL"
 
 
 class YtWorker(Thread):
     queue: Queue[YtWorkerMessage]
-    action: YtWorkerCommand
+    command: YtWorkerCommand
     args: tuple
 
-    def __init__(self, queue: Queue, action: YtWorkerCommand, *args):
+    def __init__(self, queue: Queue, command: YtWorkerCommand, *args):
         Thread.__init__(self)
         self.queue = queue
-        self.action = action
+        self.command = command
         self.args = args
 
     def run(self):
-        if self.action == YtWorkerCommand.GET_URL_INFO:
+        if self.command == YtWorkerCommand.GET_URL_INFO:
             self._get_url_info(*self.args)
-        elif self.action == YtWorkerCommand.DOWNLOAD_URL:
+        elif self.command == YtWorkerCommand.DOWNLOAD_URL:
             self._download_url(*self.args)
+        else:
+            raise ValueError(f"Command {self.command} is not recognized")
 
     def _get_url_info(self, url: str):
         logger.debug(f"Loading yt info for url <{url}>")
@@ -66,7 +78,7 @@ class YtWorker(Thread):
             self.queue.put(YtWorkerMessage.error({"exception": e}))
             return
 
-        self.queue.put(YtWorkerMessage.url_info(info))
+        self.queue.put(YtWorkerMessage.url_info_result(info))
 
     def _download_url(self, url: str, dest_dirpath: str, audio_format: str, video_format: str):
         logger.debug(f"Downloading from url <{url}> (audio: {audio_format}, video: {video_format})")
@@ -87,7 +99,7 @@ class YtWorker(Thread):
             "outtmpl": f"{dest_dirpath}/%(title)s.%(ext)s",
             "ffmpeg_location": env.FFMPEG_PATH,
             "logger": logger,
-            "progress_hooks": [],
+            "progress_hooks": [self._handle_download_progress],
         }
 
         logger.debug(f"yt-dl options: {ytl_dl_options}")
@@ -100,4 +112,16 @@ class YtWorker(Thread):
             self.queue.put(YtWorkerMessage.error({"exception": e}))
             return
 
-        self.queue.put(YtWorkerMessage.download_url(result))
+        self.queue.put(YtWorkerMessage.download_url_result(result))
+
+    def _handle_download_progress(self, event):
+        logger.debug("Download progress hook called")
+        progress = {
+            "status": event.get("status"),
+            "downloaded_bytes": event.get("downloaded_bytes"),
+            "total_bytes": event.get("total_bytes"),
+            "eta": event.get("eta"),
+            "info_dict": event.get("info_dict"),
+        }
+
+        self.queue.put(YtWorkerMessage.download_url_progress(progress))

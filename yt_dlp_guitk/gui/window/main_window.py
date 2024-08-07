@@ -7,11 +7,11 @@ from ...library import env
 from ...library.humanize import bytes_to_human
 from ...library.log import logger
 from ...library.settings import Settings
-from ...yt_dlp import YtWorker, YtWorkerCommand, YtWorkerMessage
+from ...yt_dlp import YtWorker, YtWorkerCommand, YtWorkerMessage, YtWorkerMessageType
 from .base_window import BaseWindow
 from .debug_window import DebugWindow
 
-WORKER_QUEUE_PROCESS_DELAY = 1000
+WORKER_QUEUE_PROCESS_DELAY = 100
 
 _DEFAULT_AUDIO_FORMAT = "best"
 _DEFAULT_AUDIO_FORMAT_LIST = ["None", "best"]
@@ -36,7 +36,7 @@ _VIDEO_FORMAT_DETAILS = {
 
 
 class MainWindow(BaseWindow):
-    _size = (500, 300)
+    _size = (500, 320)
     _loading_ui_keys = [
         "entry.url",
         "button.load_formats",
@@ -53,9 +53,11 @@ class MainWindow(BaseWindow):
     _is_loading: bool = False
     _urls_info: dict = {}
     _download_formats: dict = {}
+    _status_stack: ui.HStack
 
     def __init__(self):
         BaseWindow.__init__(self, title="yt-dlp-guitk", size=self._size, min_size=self._size, pady=0)
+        self.set_padding(bottom=0)
 
         self._worker_queue = Queue()
 
@@ -65,7 +67,7 @@ class MainWindow(BaseWindow):
                 ui.Label("URL:", pady=(3, 0))
                 ui.Entry(key="entry.url", sticky="nswe", weightx=1, keyrelease=True)
 
-            with ui.HStack(vexpand=True, padding=(0, 10)) as self.info_stack:
+            with ui.HStack(vexpand=True, padding=(0, 10)):
                 with ui.LabelFrame("Options", sticky="nswe", weightx=1, padding=(0, 8)):
                     with ui.VStack():
                         with ui.HStack(vexpand=False, padding=(0, 0, 0, 10)):
@@ -124,7 +126,7 @@ class MainWindow(BaseWindow):
                             ui.CheckButton(
                                 "Merge",
                                 key="checkbutton.merge_files",
-                                checked=True,
+                                checked=env.FFMPEG_PRESENT,
                                 tooltip="Merge audio and video files into a single file",
                                 disabled=(not env.FFMPEG_PRESENT),
                             )
@@ -153,9 +155,14 @@ class MainWindow(BaseWindow):
                             )
 
             with ui.HStack(vexpand=False, padding=0):
-                ui.Label("", key="label.status", pady=0)
+                ui.Label("", key="label.status", pady=(4, 0))
                 ui.HSpacer()
                 ui.Button("Download", key="button.download")
+
+            # TODO: Make ProgressBar expand when this is merged and released
+            # https://github.com/RhetTbull/guitk/pull/53
+            with ui.HStack(vexpand=0, padding=0, distribute=True):
+                ui.ProgressBar(key="progressbar", value=0.0, maximum=1.0, length=(self._size[0] - 30))
 
         # Just having this will disable all 'default' menus (File, Edit, etc)
         with ui.MenuBar():
@@ -181,14 +188,19 @@ class MainWindow(BaseWindow):
             if not isinstance(message, YtWorkerMessage):
                 raise ValueError(f"Found unexpected message in worker queue: {message}")
 
-            if message.command == YtWorkerCommand.ERROR:
+            if message.type == YtWorkerMessageType.ERROR:
                 logger.error(f"Encountered error message in worker queue: {message.content}")
 
-            if message.command == YtWorkerCommand.GET_URL_INFO:
-                self.on_url_info_loaded(message.content)
+            if message.type == YtWorkerMessageType.GET_URL_INFO_RESULT:
+                self.on_get_url_info_result(message.content)
 
-            if message.command == YtWorkerCommand.DOWNLOAD_URL:
-                self.on_url_downloaded(message.content)
+            if message.type == YtWorkerMessageType.DOWNLOAD_URL_RESULT:
+                self.on_download_url_result(message.content)
+
+            if message.type == YtWorkerMessageType.DOWNLOAD_URL_PROGRESS:
+                self.on_download_url_progress(message.content)
+                # We expect more messages after this
+                self.root.after(WORKER_QUEUE_PROCESS_DELAY, self.process_worker_queue)
         except Empty:
             self.root.after(WORKER_QUEUE_PROCESS_DELAY, self.process_worker_queue)
             pass
@@ -244,7 +256,7 @@ class MainWindow(BaseWindow):
 
         self["combobox.video_format"].combobox["values"] = _DEFAULT_VIDEO_FORMAT_LIST + labels
 
-    def on_url_info_loaded(self, info: dict | None = None):
+    def on_get_url_info_result(self, info: dict | None = None, update_ui_disable: bool = True):
         if info is None:
             self["combobox.audio_format"].value = _DEFAULT_AUDIO_FORMAT
             self["combobox.audio_format"].combobox["values"] = _DEFAULT_AUDIO_FORMAT_LIST
@@ -259,12 +271,33 @@ class MainWindow(BaseWindow):
             self.update_audio_formats()
             self.update_video_formats()
 
-        self.set_ui_disabled(False)
+        if update_ui_disable:
+            self.set_ui_disabled(False)
 
-    def on_url_downloaded(self, result: int):
+    def on_download_url_result(self, result: int):
         logger.info(f"URL download result: {result}")
 
+        self["progressbar"].value = 1.0
         self.set_ui_disabled(False, enabled_status="Download complete")
+
+    def on_download_url_progress(self, progress: dict):
+        status = progress.get("status")
+        logger.info(f"URL download status: {status}")
+
+        if status != "downloading":
+            return
+
+        amount_downloaded = progress.get("downloaded_bytes")
+        amount_total = progress.get("total_bytes")
+        if amount_downloaded is not None and amount_total is not None:
+            ratio = max(0.0, min(1.0, amount_downloaded / amount_total))
+            self["progressbar"].value = ratio
+
+            logger.info(f"URL download progress: {ratio}")
+
+        info_dict = progress.get("info_dict")
+        if info_dict is not None and self.url not in self._urls_info:
+            self.on_get_url_info_result(info_dict, update_ui_disable=False)
 
     @property
     def url(self):
@@ -273,7 +306,7 @@ class MainWindow(BaseWindow):
     @ui.on("entry.url")
     def url_entry_changed(self):
         # Try updating UI with known info, or reset it
-        self.on_url_info_loaded(self._urls_info.get(self.url, None))
+        self.on_get_url_info_result(self._urls_info.get(self.url, None))
 
     @ui.on("button.load_formats")
     def load_url_info(self):
@@ -283,7 +316,7 @@ class MainWindow(BaseWindow):
 
         # If we already have this info, use it directly. Otherwise download it.
         if url in self._urls_info.keys():
-            self.on_url_info_loaded(self._urls_info[url])
+            self.on_get_url_info_result(self._urls_info[url])
         else:
             self._run_worker(YtWorkerCommand.GET_URL_INFO, url)
 
@@ -328,6 +361,7 @@ class MainWindow(BaseWindow):
         video_format = self["combobox.video_format"].value.split("-")[0].strip()
 
         self.set_ui_disabled(True, disabled_status="Downloading...")
+        self["progressbar"].value = 0.0
         self._run_worker(YtWorkerCommand.DOWNLOAD_URL, self.url, dest_dirpath, audio_format, video_format)
 
     @ui.on("entry.output_directory")
@@ -341,6 +375,6 @@ class MainWindow(BaseWindow):
     def open_debug_window(self):
         DebugWindow(parent=self.window)
 
-    def _run_worker(self, action: YtWorkerCommand, *args):
-        YtWorker(self._worker_queue, action, *args).start()
+    def _run_worker(self, command: YtWorkerCommand, *args):
+        YtWorker(self._worker_queue, command, *args).start()
         self.root.after(WORKER_QUEUE_PROCESS_DELAY, self.process_worker_queue)
