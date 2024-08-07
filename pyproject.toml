@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "yt-dlp-guitk"
-version = "0.0.1a3"
+version = "0.0.1a4"
 description = "A GUI wrapper over yt-dlp using guitk"
 authors = ["Kevin Romero Peces-Barba <hello@kevinrpb.me>"]
 license = "MIT"
